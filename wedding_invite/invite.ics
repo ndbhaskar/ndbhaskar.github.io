@@ -1,0 +1,34 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Bhaskara & Meghana//Shubhavivaha//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Bhaskara & Meghana — Shubhavivaha
+BEGIN:VEVENT
+UID:devathakarya-20261202@ndbhaskar.github.io
+DTSTAMP:20261116T000000Z
+DTSTART;VALUE=DATE:20261202
+DTEND;VALUE=DATE:20261203
+SUMMARY:Devathakarya & Chappara — Bhaskara & Meghana
+DESCRIPTION:Pre-wedding rituals · ದೇವತಾಕಾರ್ಯ ಮತ್
+ ತು ಚಪ್ಪರ
+END:VEVENT
+BEGIN:VEVENT
+UID:muhurtha-20261203@ndbhaskar.github.io
+DTSTAMP:20261116T000000Z
+DTSTART:20261203T025000Z
+DTEND:20261203T035000Z
+SUMMARY:Muhurtha — Bhaskara & Meghana
+DESCRIPTION:Wedding ceremony (Dashami) in Shubha Dhanur Lagna\, 8:20–9:20
+  AM IST · ಮುಹೂರ್ತ: ಬೆಳಿಗ್ಗೆ 8:20ರಿಂ
+ ದ 9:20 ರೊಳಗೆ ಸಲ್ಲುವ ಶುಭ ಧನುರ್ ಲ
+ ಗ್ನದಲ್ಲಿ
+LOCATION:Sri Guru Siddarameshwara Samudaya Bhavana\, Banasandra Road\, Turu
+ vekere Town
+BEGIN:VALARM
+TRIGGER:-PT12H
+ACTION:DISPLAY
+DESCRIPTION:Muhurtha — Bhaskara & Meghana
+END:VALARM
+END:VEVENT
+END:VCALENDAR
