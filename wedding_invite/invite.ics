@@ -5,13 +5,13 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:Bhaskara & Meghana — Shubhavivaha
 BEGIN:VEVENT
-UID:devathakarya-20261202@ndbhaskar.github.io
+UID:reception-20261202@ndbhaskar.github.io
 DTSTAMP:20261116T000000Z
-DTSTART;VALUE=DATE:20261202
-DTEND;VALUE=DATE:20261203
-SUMMARY:Devathakarya & Chappara — Bhaskara & Meghana
-DESCRIPTION:Pre-wedding rituals · ದೇವತಾಕಾರ್ಯ ಮತ್
- ತು ಚಪ್ಪರ
+DTSTART:20261202T133000Z
+DTEND:20261202T163000Z
+SUMMARY:Reception — Bhaskara & Meghana
+DESCRIPTION:ಆರತಕ್ಷತೆ · Reception · Wednesday December 2\, 2026 · 7:00 PM IST
+LOCATION:Sri Guru Siddarameshwara Samudaya Bhavana\, Banasandra Road\, Turuvekere Town
 END:VEVENT
 BEGIN:VEVENT
 UID:muhurtha-20261203@ndbhaskar.github.io

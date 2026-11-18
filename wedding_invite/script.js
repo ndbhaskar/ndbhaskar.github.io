@@ -97,6 +97,65 @@
     catch (e) { prompt("", data.url); }
   });
 
+  /* Music ------------------------------------------------------------ */
+  const audio = document.getElementById("bg-audio");
+  const musicBtn = document.getElementById("music-btn");
+  let musicStarted = false;
+  let isMuted = false;
+  try { isMuted = localStorage.getItem("invite-music-muted") === "1"; } catch (e) {}
+
+  function setMuted(m) {
+    isMuted = m;
+    audio.muted = m;
+    musicBtn.setAttribute("aria-pressed", m ? "true" : "false");
+    try { localStorage.setItem("invite-music-muted", m ? "1" : "0"); } catch (e) {}
+  }
+
+  function startMusic() {
+    if (musicStarted) return;
+    musicStarted = true;
+    audio.muted = isMuted;
+    audio.volume = isMuted ? 0.65 : 0;
+    audio.play().then(() => {
+      musicBtn.classList.add("is-playing");
+      if (isMuted) return;
+      let v = 0;
+      const target = 0.65;
+      const step = () => { v = Math.min(v + 0.02, target); audio.volume = v; if (v < target) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    }).catch(() => {
+      musicStarted = false;
+      const unblock = () => {
+        startMusic();
+        window.removeEventListener("scroll", unblock, { passive: true });
+        window.removeEventListener("touchstart", unblock, { passive: true });
+        document.removeEventListener("click", unblock);
+      };
+      window.addEventListener("scroll", unblock, { passive: true });
+      window.addEventListener("touchstart", unblock, { passive: true });
+      document.addEventListener("click", unblock);
+    });
+  }
+
+  setTimeout(startMusic, 2000);
+
+  // On any click anywhere, also try to start (covers gesture requirement)
+  document.addEventListener("click", function unblockOnClick() {
+    startMusic();
+    document.removeEventListener("click", unblockOnClick);
+  });
+
+  musicBtn.addEventListener("click", () => {
+    if (!musicStarted) { startMusic(); return; }
+    setMuted(!isMuted);
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!musicStarted) return;
+    if (document.hidden) { audio.pause(); musicBtn.classList.remove("is-playing"); }
+    else if (!isMuted) { audio.play().then(() => musicBtn.classList.add("is-playing")).catch(() => {}); }
+  });
+
   /* Printed card viewer ------------------------------------------------ */
   const dialog = $("[data-card-dialog]");
   const tabs = $$('[role="tab"]', dialog);
@@ -155,19 +214,142 @@
     if (id !== "#top") { target.setAttribute("tabindex", "-1"); target.focus({ preventScroll: true }); }
   }));
 
+  /* Gallery lightbox -------------------------------------------------- */
+  const glDialog = document.getElementById("gallery-lightbox");
+  const glImg = document.getElementById("gl-img");
+  const glCounter = document.getElementById("gl-counter");
+  const glPrev = document.getElementById("gl-prev");
+  const glNext = document.getElementById("gl-next");
+  const galleryItems = $$(".gallery__item[data-gallery-open]");
+  const totalGallery = galleryItems.length;
+  let currentGalleryIdx = 0;
+
+  function getGalleryItem(idx) {
+    const item = galleryItems[idx];
+    if (!item) return null;
+    const img = item.querySelector("img");
+    const sources = [...item.querySelectorAll("source[type='image/webp']")];
+    let srcset = sources.length ? sources[sources.length - 1].srcset : "";
+    const m = srcset.match(/(\S+)\s+1600w/);
+    return { src: m ? m[1] : img.src, alt: img.dataset.altEn || img.alt };
+  }
+
+  function glShow(idx) {
+    currentGalleryIdx = ((idx % totalGallery) + totalGallery) % totalGallery;
+    const { src, alt } = getGalleryItem(currentGalleryIdx);
+    glImg.src = src;
+    glImg.alt = alt;
+    glCounter.textContent = `${currentGalleryIdx + 1} / ${totalGallery}`;
+    glPrev.style.opacity = totalGallery > 1 ? "1" : "0";
+    glNext.style.opacity = totalGallery > 1 ? "1" : "0";
+  }
+
+  function glOpen(idx) {
+    glShow(idx);
+    glDialog.showModal();
+    if (lenis) lenis.stop();
+  }
+
+  function glClose() {
+    glDialog.close();
+    if (lenis) lenis.start();
+  }
+
+  galleryItems.forEach((item) => {
+    item.addEventListener("click", () => glOpen(parseInt(item.dataset.galleryOpen, 10)));
+    item.setAttribute("role", "button");
+    item.setAttribute("tabindex", "0");
+    item.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); glOpen(parseInt(item.dataset.galleryOpen, 10)); } });
+  });
+
+  document.getElementById("gl-close").addEventListener("click", glClose);
+  glPrev.addEventListener("click", () => glShow(currentGalleryIdx - 1));
+  glNext.addEventListener("click", () => glShow(currentGalleryIdx + 1));
+
+  glDialog.addEventListener("click", (e) => { if (e.target === glDialog) glClose(); });
+  glDialog.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft") glShow(currentGalleryIdx - 1);
+    if (e.key === "ArrowRight") glShow(currentGalleryIdx + 1);
+  });
+
+  let glTouchX = null;
+  glDialog.addEventListener("touchstart", (e) => { glTouchX = e.touches[0].clientX; }, { passive: true });
+  glDialog.addEventListener("touchend", (e) => {
+    if (glTouchX === null) return;
+    const dx = e.changedTouches[0].clientX - glTouchX;
+    if (Math.abs(dx) > 50) glShow(currentGalleryIdx + (dx < 0 ? 1 : -1));
+    glTouchX = null;
+  });
+
+  /* Auto-scroll -------------------------------------------------------- */
+  const autoScrollBtn = document.getElementById("autoscroll-btn");
+  let autoScrollActive = false;
+  let autoScrollRAF = null;
+  let autoScrollPauseTimer = null;
+  const AUTO_SCROLL_SPEED = 0.4;
+
+  function autoScrollStep() {
+    if (!autoScrollActive) return;
+    const maxY = document.documentElement.scrollHeight - window.innerHeight;
+    const currentY = lenis ? lenis.scroll : window.scrollY;
+    if (currentY >= maxY - 2) { setAutoScroll(false); return; }
+    if (lenis) lenis.scrollTo(currentY + AUTO_SCROLL_SPEED, { immediate: true });
+    else window.scrollBy(0, AUTO_SCROLL_SPEED);
+    autoScrollRAF = requestAnimationFrame(autoScrollStep);
+  }
+
+  function setAutoScroll(on) {
+    autoScrollActive = on;
+    autoScrollBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    autoScrollBtn.classList.toggle("is-active", on);
+    cancelAnimationFrame(autoScrollRAF);
+    if (on) autoScrollRAF = requestAnimationFrame(autoScrollStep);
+  }
+
+  function pauseAutoScroll() {
+    if (!autoScrollActive) return;
+    setAutoScroll(false);
+    clearTimeout(autoScrollPauseTimer);
+    autoScrollPauseTimer = setTimeout(() => {
+      if (!glDialog.open && !dialog.open) setAutoScroll(true);
+    }, 4000);
+  }
+
+  window.addEventListener("wheel", pauseAutoScroll, { passive: true });
+  window.addEventListener("touchmove", pauseAutoScroll, { passive: true });
+  window.addEventListener("keydown", (e) => {
+    if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", " "].includes(e.key)) pauseAutoScroll();
+  });
+
+  autoScrollBtn.addEventListener("click", () => {
+    clearTimeout(autoScrollPauseTimer);
+    setAutoScroll(!autoScrollActive);
+  });
+
   /* Preloader ---------------------------------------------------------- */
   let intro = () => {};
   const preloader = $(".preloader");
-  const heroImg = $("[data-hero-img]");
+  const heroImg = $('[data-hero-img]');
+
+  // Clicking the preloader is the natural first gesture — start music here
+  preloader.addEventListener("click", () => startMusic(), { once: true });
+
   const ready = Promise.all([
     document.fonts ? document.fonts.ready : Promise.resolve(),
     heroImg.decode ? heroImg.decode().catch(() => {}) : Promise.resolve(),
-    new Promise((r) => setTimeout(r, reduceMotion ? 0 : 1400)), // let the monogram finish drawing
+    new Promise((r) => setTimeout(r, reduceMotion ? 0 : 1400)),
   ]);
   Promise.race([ready, new Promise((r) => setTimeout(r, 4000))]).then(() => {
     root.classList.add("is-loaded");
-    setTimeout(() => { preloader.classList.add("is-done"); intro(); }, reduceMotion ? 0 : 1300);
+    setTimeout(() => {
+      preloader.classList.add("is-done");
+      intro();
+    }, reduceMotion ? 0 : 1300);
   });
+
+  // Auto-scroll starts after preloader exits — placed before motion guard so it
+  // also works on browsers without GSAP.
+  if (!reduceMotion) setTimeout(() => setAutoScroll(true), reduceMotion ? 0 : 5000);
 
   if (!motion) return;
 
